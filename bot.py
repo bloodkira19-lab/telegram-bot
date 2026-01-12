@@ -474,8 +474,7 @@ app.add_handler(CommandHandler("comprar_carro", comprar_carro))
 app.add_handler(CommandHandler("alugar_ap", alugar_ap))
 app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
 app.add_handler(CommandHandler("concessionaria", concessionaria))
-app.add_handler(CommandHandler("mobiliaria", imobiliaria))
-
+app.add_handler(CommandHandler("imobiliaria", imobiliaria))
 app.add_handler(CallbackQueryHandler(comprar_carro, pattern="^comprar_carro\\|"))
 app.add_handler(CallbackQueryHandler(alugar_ap, pattern="^alugar_ap\\|"))
 
@@ -487,4 +486,5 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
+
 
