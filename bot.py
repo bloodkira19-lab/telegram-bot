@@ -15,6 +15,9 @@ ARQUIVO_PONTOS = "pontos.json"
 TOKEN = "8217989034:AAHVFQmarB8_2gDex_ukEBRwq3bsi2cWdx4"
 STICKER_SET = "YonseiCards_by_fStikBot"
 
+ENERGIA_MAX = 400
+VIDA_MAX = 100
+
 # ===== MENSALIDADES =====
 MENSALIDADES = {
     "direito": {"nome": "𝐃𝐢𝐫𝐞𝐢𝐭𝐨", "valor": 4300},
@@ -46,8 +49,8 @@ def garantir_usuario(user_id):
     if user_id not in pontos:
         pontos[user_id] = {
             "w": 0,
-            "energia": 100,
-            "vida": 100
+            "energia": ENERGIA_MAX,
+            "vida": VIDA_MAX
         }
 
 # ===== COMANDOS =====
@@ -69,7 +72,7 @@ async def sorteio(update, context):
     sticker = random.choice(sticker_set.stickers)
     await update.message.reply_sticker(sticker.file_id)
 
-# ===== ₩ =====
+# ===== ₩˚₊‧ =====
 async def pontuar(update, context):
     user = update.effective_user
     user_id = str(user.id)
@@ -91,7 +94,7 @@ async def pontuar(update, context):
         f"Total: {pontos[user_id]['w']}₩˚₊‧"
     )
 
-# ===== ✶ =====
+# ===== ✶˚₊‧ ENERGIA =====
 async def alterar_energia(update, context):
     user_id = str(update.effective_user.id)
     match = re.search(r'([+-]\d+)', " ".join(context.args))
@@ -103,14 +106,18 @@ async def alterar_energia(update, context):
     valor = int(match.group(1))
     garantir_usuario(user_id)
 
-    pontos[user_id]["energia"] = max(0, pontos[user_id]["energia"] + valor)
+    pontos[user_id]["energia"] = max(
+        0,
+        min(ENERGIA_MAX, pontos[user_id]["energia"] + valor)
+    )
+
     salvar_pontos(pontos)
 
     await update.message.reply_text(
-        f"✶˚₊‧ Energia: {pontos[user_id]['energia']}"
+        f"✶˚₊‧ Energia: {pontos[user_id]['energia']}/{ENERGIA_MAX}"
     )
 
-# ===== ♡ =====
+# ===== ♡˚₊‧ VIDA =====
 async def alterar_vida(update, context):
     user_id = str(update.effective_user.id)
     match = re.search(r'([+-]\d+)', " ".join(context.args))
@@ -122,25 +129,28 @@ async def alterar_vida(update, context):
     valor = int(match.group(1))
     garantir_usuario(user_id)
 
-    pontos[user_id]["vida"] = max(0, pontos[user_id]["vida"] + valor)
+    pontos[user_id]["vida"] = max(
+        0,
+        min(VIDA_MAX, pontos[user_id]["vida"] + valor)
+    )
+
     salvar_pontos(pontos)
 
     await update.message.reply_text(
-        f"♡˚₊‧ Vida: {pontos[user_id]['vida']}"
+        f"♡˚₊‧ Vida: {pontos[user_id]['vida']}/{VIDA_MAX}"
     )
 
 # ===== STATUS =====
 async def ver_pontos(update, context):
     user = update.effective_user
     user_id = str(user.id)
-
     garantir_usuario(user_id)
 
     await update.message.reply_text(
         f"📊 *Status de {user.first_name}*\n\n"
-        f"₩˚₊‧ ₩: {pontos[user_id]['w']}\n"
-        f"✶˚₊‧ Energia: {pontos[user_id]['energia']}\n"
-        f"♡˚₊‧ Vida: {pontos[user_id]['vida']}",
+        f"₩˚₊‧ {pontos[user_id]['w']}\n"
+        f"✶˚₊‧ {pontos[user_id]['energia']}/{ENERGIA_MAX}\n"
+        f"♡˚₊‧ {pontos[user_id]['vida']}/{VIDA_MAX}",
         parse_mode="Markdown"
     )
 
@@ -150,8 +160,8 @@ async def reset_pontos(update, context):
 
     pontos[user_id] = {
         "w": 0,
-        "energia": 100,
-        "vida": 100
+        "energia": ENERGIA_MAX,
+        "vida": VIDA_MAX
     }
     salvar_pontos(pontos)
 
@@ -226,4 +236,3 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
-
