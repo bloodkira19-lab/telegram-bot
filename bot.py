@@ -12,7 +12,7 @@ from telegram.ext import (
 
 # ===== CONSTANTES =====
 ARQUIVO_PONTOS = "pontos.json"
-TOKEN = "SEU_TOKEN_AQUI"
+TOKEN = "8217989034:AAHVFQmarB8_2gDex_ukEBRwq3bsi2cWdx4"
 STICKER_SET = "YonseiCards_by_fStikBot"
 
 # ===== MENSALIDADES =====
@@ -226,3 +226,4 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
+
