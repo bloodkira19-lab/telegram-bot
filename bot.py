@@ -30,6 +30,57 @@ MENSALIDADES = {
     "jornal": {"nome": "𝐉𝐨𝐫𝐧𝐚𝐥𝐢𝐬𝐦𝐨", "valor": 1950}
 }
 
+CONCESSIONARIA = {
+    "usado": {"preco": 8000, "parcela": 833},
+    "fora_linha": {"preco": 10000, "parcela": 1000},
+    "atual": {"preco": 100000, "parcela": 8333}
+}
+
+IMOBILIARIA = {
+    "simples": 450,
+    "medio": 750,
+    "luxo": 2340
+}
+
+# ===== CONCESSIONÁRIA =====
+CONCESSIONARIA = {
+    "usado": {
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐮𝐬𝐚𝐝𝐨",
+        "total": 8000,
+        "parcelas": 12,
+        "parcela": 833
+    },
+    "zerado_antigo": {
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐳𝐞𝐫𝐚𝐝𝐨 (fora de linha)",
+        "total": 10000,
+        "parcelas": 12,
+        "parcela": 1000
+    },
+    "zerado_atual": {
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐳𝐞𝐫𝐚𝐝𝐨 (atual)",
+        "total": 100000,
+        "parcelas": 12,
+        "parcela": 8333
+    }
+}
+
+# ===== IMOBILIÁRIA =====
+IMOBILIARIA = {
+    "simples": {
+        "nome": "𝐂𝐚𝐬𝐚/AP sem reformas",
+        "aluguel": 450
+    },
+    "medio": {
+        "nome": "𝐂𝐚𝐬𝐚/AP pequeno estruturado",
+        "aluguel": 750
+    },
+    "luxo": {
+        "nome": "𝐂𝐚𝐬𝐚/AP caro",
+        "aluguel": 2340
+    }
+}
+
+
 # ===== PERSISTÊNCIA =====
 def carregar_pontos():
     try:
@@ -46,14 +97,203 @@ def salvar_pontos(pontos):
 pontos = carregar_pontos()
 
 def garantir_usuario(user_id):
-    if user_id not in pontos:
+    if user_id not in pontos or not isinstance(pontos[user_id], dict):
         pontos[user_id] = {
             "w": 0,
-            "energia": ENERGIA_MAX,
-            "vida": VIDA_MAX
+            "vida": 100,
+            "energia": 400,
+            "bens": {
+                "veiculos": [],
+                "imoveis": []
+            },
+            "parcelas": [],
+            "aluguel": []
+        }
+
         }
 
 # ===== COMANDOS =====
+async def alugar_ap(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    user_id = str(query.from_user.id)
+    garantir_usuario(user_id)
+
+    ap_id = query.data.split("|")[1]
+    ap = IMOBILIARIA[ap_id]
+
+    pontos[user_id]["aluguel"] = {
+        "nome": ap["nome"],
+        "valor": ap["aluguel"]
+    }
+
+    salvar_pontos(pontos)
+
+    await query.edit_message_text(
+        f"🏠 *Imóvel alugado*\n\n"
+        f"{ap['nome']}\n"
+        f"₩{ap['aluguel']} por mês",
+        parse_mode="Markdown"
+    )
+
+async def comprar_carro(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    user_id = str(query.from_user.id)
+    garantir_usuario(user_id)
+
+    carro_id = query.data.split("|")[1]
+    carro = CONCESSIONARIA[carro_id]
+
+    pontos[user_id].setdefault("parcelas", [])
+    pontos[user_id]["parcelas"].append({
+        "nome": carro["nome"],
+        "valor": carro["parcela"],
+        "restantes": carro["parcelas"]
+    })
+
+    salvar_pontos(pontos)
+
+    await query.edit_message_text(
+        f"✅ *Compra realizada*\n\n"
+        f"{carro['nome']}\n"
+        f"₩{carro['parcela']} por {carro['parcelas']} meses",
+        parse_mode="Markdown"
+    )
+
+async def imobiliaria(update, context):
+    keyboard = [
+        [InlineKeyboardButton(
+            f"{d['nome']} — ₩{d['aluguel']}/mês",
+            callback_data=f"alugar_ap|{k}"
+        )]
+        for k, d in IMOBILIARIA.items()
+    ]
+
+    await update.message.reply_text(
+        "🏠 *𝐈𝐦𝐨𝐛𝐢𝐥𝐢𝐚́𝐫𝐢𝐚*",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def concessionaria(update, context):
+    keyboard = [
+        [InlineKeyboardButton(
+            f"{d['nome']} — ₩{d['parcela']} x{d['parcelas']}",
+            callback_data=f"comprar_carro|{k}"
+        )]
+        for k, d in CONCESSIONARIA.items()
+    ]
+
+    await update.message.reply_text(
+        "🚗 *𝐂𝐨𝐧𝐜𝐞𝐬𝐬𝐢𝐨𝐧𝐚́𝐫𝐢𝐚*",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def cobrar_mes(update, context):
+    for user_id, dados in pontos.items():
+
+        # Parcelas
+        novas_parcelas = []
+        for p in dados["parcelas"]:
+            if dados["w"] >= p["valor"]:
+                dados["w"] -= p["valor"]
+                p["restantes"] -= 1
+                if p["restantes"] > 0:
+                    novas_parcelas.append(p)
+            else:
+                novas_parcelas.append(p)
+
+        dados["parcelas"] = novas_parcelas
+
+        # Aluguel
+        for aluguel in dados["aluguel"]:
+            if dados["w"] >= aluguel["valor"]:
+                dados["w"] -= aluguel["valor"]
+
+    salvar_pontos(pontos)
+
+    await update.message.reply_text("📆 Mês encerrado. Cobranças aplicadas.")
+
+async def alugar_ap(update, context):
+    user = update.effective_user
+    user_id = str(user.id)
+    garantir_usuario(user_id)
+
+    if not context.args:
+        await update.message.reply_text("❌ Use: /alugar_ap simples|medio|luxo")
+        return
+
+    tipo = context.args[0]
+
+    if tipo not in IMOBILIARIA:
+        await update.message.reply_text("❌ Tipo inválido.")
+        return
+
+    pontos[user_id]["aluguel"].append({
+        "tipo": tipo,
+        "valor": IMOBILIARIA[tipo]
+    })
+
+    salvar_pontos(pontos)
+
+    await update.message.reply_text(
+        f"🏠 AP alugado!\nMensalidade: {IMOBILIARIA[tipo]}₩˚₊‧"
+    )
+
+async def comprar_carro(update, context):
+    user = update.effective_user
+    user_id = str(user.id)
+    garantir_usuario(user_id)
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ Use:\n/comprar_carro usado|fora_linha|atual vista|parcelado"
+        )
+        return
+
+    tipo = context.args[0]
+    forma = context.args[1]
+
+    if tipo not in CONCESSIONARIA:
+        await update.message.reply_text("❌ Tipo inválido.")
+        return
+
+    carro = CONCESSIONARIA[tipo]
+
+    if forma == "vista":
+        if pontos[user_id]["w"] < carro["preco"]:
+            await update.message.reply_text("❌ ₩˚₊‧ insuficiente.")
+            return
+
+        pontos[user_id]["w"] -= carro["preco"]
+        pontos[user_id]["bens"]["veiculos"].append(tipo)
+
+        msg = f"🚗 Veículo comprado à vista por {carro['preco']}₩˚₊‧"
+
+    elif forma == "parcelado":
+        pontos[user_id]["parcelas"].append({
+            "item": f"Carro {tipo}",
+            "valor": carro["parcela"],
+            "restantes": 12
+        })
+
+        pontos[user_id]["bens"]["veiculos"].append(tipo)
+
+        msg = (
+            "🚗 Veículo adquirido!\n"
+            f"12x de {carro['parcela']}₩˚₊‧"
+        )
+    else:
+        await update.message.reply_text("❌ Forma inválida.")
+        return
+
+    salvar_pontos(pontos)
+    await update.message.reply_text(msg)
+
 async def start(update, context):
     await update.message.reply_text(
         "🎓 *Sistema Yonsei*\n\n"
@@ -227,6 +467,14 @@ app.add_handler(CommandHandler("pontos", ver_pontos))
 app.add_handler(CommandHandler("reset", reset_pontos))
 app.add_handler(CommandHandler("mensalidade", mensalidade))
 app.add_handler(CallbackQueryHandler(pagar_mensalidade, pattern="^pagar\\|"))
+app.add_handler(CommandHandler("comprar_carro", comprar_carro))
+app.add_handler(CommandHandler("alugar_ap", alugar_ap))
+app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
+app.add_handler(CommandHandler("concessionaria", concessionaria))
+app.add_handler(CommandHandler("mobiliaria", imobiliaria))
+
+app.add_handler(CallbackQueryHandler(comprar_carro, pattern="^comprar_carro\\|"))
+app.add_handler(CallbackQueryHandler(alugar_ap, pattern="^alugar_ap\\|"))
 
 print("🤖 Bot rodando via webhook...")
 
