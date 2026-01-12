@@ -43,7 +43,7 @@ async def reset_pontos(update, context):
     salvar_pontos(pontos)
 
     await update.message.reply_text(
-        f"♻️ {nome}, seus pontos foram resetados para 0."
+        f" {nome}, seus pontos foram resetados para 0₩."
     )
 
 async def pontuar(update, context):
@@ -73,28 +73,16 @@ async def pontuar(update, context):
 
     await update.message.reply_text(
         f"⭐ {user.first_name}\n"
-        f"Alteração: {valor:+}\n"
-        f"Total de pontos: {pontos[user_id]}"
+        f"Alteração: {valor:+} ₩\n"
+        f"Total de pontos: {pontos[user_id]} ₩"
     )
 
 async def ver_pontos(update, context):
     user_id = str(update.effective_user.id)
     total = pontos.get(user_id, 0)
 
-    await update.message.reply_text(f"⭐ Você tem {total} pontos.")
+    await update.message.reply_text(f"⭐ Você tem {total} ₩.")
 
-# ===== APP =====
-app = ApplicationBuilder().token(TOKEN).build()
-
-# ===== HANDLERS =====
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("sorteio", sorteio))
-app.add_handler(CommandHandler("pontuar", pontuar))
-app.add_handler(CommandHandler("pontos", ver_pontos))
-app.add_handler(CommandHandler("reset", reset_pontos))
-
-# ===== START BOT =====
-print("🤖 Bot de figurinhas rodando...")
 # ===== WEBHOOK CONFIG =====
 
 PORT = int(os.environ.get("PORT", 10000))
