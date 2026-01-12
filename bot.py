@@ -11,6 +11,9 @@ from telegram.ext import (
 )
 
 # ===== CONSTANTES =====
+FOTO_CONCESSIONARIA = "6842878824"
+FOTO_IMOBILIARIA = "6842878824"
+
 ARQUIVO_PONTOS = "pontos.json"
 TOKEN = "8217989034:AAHVFQmarB8_2gDex_ukEBRwq3bsi2cWdx4"
 STICKER_SET = "YonseiCards_by_fStikBot"
@@ -172,8 +175,9 @@ async def imobiliaria(update, context):
         for k, d in IMOBILIARIA.items()
     ]
 
-    await update.message.reply_text(
-        "🏠 *𝐈𝐦𝐨𝐛𝐢𝐥𝐢𝐚́𝐫𝐢𝐚*",
+    await update.message.reply_photo(
+        photo=FOTO_IMOBILIARIA,
+        caption="🏠 *𝐈𝐦𝐨𝐛𝐢𝐥𝐢𝐚́𝐫𝐢𝐚*\n\nEscolha um imóvel:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -187,8 +191,9 @@ async def concessionaria(update, context):
         for k, d in CONCESSIONARIA.items()
     ]
 
-    await update.message.reply_text(
-        "🚗 *𝐂𝐨𝐧𝐜𝐞𝐬𝐬𝐢𝐨𝐧𝐚́𝐫𝐢𝐚*",
+    await update.message.reply_photo(
+        photo=FOTO_CONCESSIONARIA,
+        caption="🚗 *𝐂𝐨𝐧𝐜𝐞𝐬𝐬𝐢𝐨𝐧𝐚́𝐫𝐢𝐚*\n\nEscolha um veículo:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
