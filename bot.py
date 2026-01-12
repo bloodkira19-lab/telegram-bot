@@ -113,8 +113,6 @@ def garantir_usuario(user_id):
             "aluguel": []
         }
 
-        }
-
 # ===== COMANDOS =====
 async def alugar_ap(update, context):
     query = update.callback_query
@@ -489,3 +487,4 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
+
