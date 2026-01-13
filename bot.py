@@ -11,11 +11,12 @@ from telegram.ext import (
 )
 
 # ===== CONSTANTES =====
+TOKEN = "8217989034:AAHVFQmarB8_2gDex_ukEBRwq3bsi2cWdx4"
+ARQUIVO_PONTOS = "pontos.json"
+
 FOTO_CONCESSIONARIA = "6842878824"
 FOTO_IMOBILIARIA = "6842878824"
 
-ARQUIVO_PONTOS = "pontos.json"
-TOKEN = "8217989034:AAHVFQmarB8_2gDex_ukEBRwq3bsi2cWdx4"
 STICKER_SET = "YonseiCards_by_fStikBot"
 
 ENERGIA_MAX = 400
@@ -33,35 +34,20 @@ MENSALIDADES = {
     "jornal": {"nome": "𝐉𝐨𝐫𝐧𝐚𝐥𝐢𝐬𝐦𝐨", "valor": 1950}
 }
 
-CONCESSIONARIA = {
-    "usado": {"preco": 8000, "parcela": 833},
-    "fora_linha": {"preco": 10000, "parcela": 1000},
-    "atual": {"preco": 100000, "parcela": 8333}
-}
-
-IMOBILIARIA = {
-    "simples": 450,
-    "medio": 750,
-    "luxo": 2340
-}
-
 # ===== CONCESSIONÁRIA =====
 CONCESSIONARIA = {
     "usado": {
-        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐮𝐬𝐚𝐝𝐨",
-        "total": 8000,
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 usado",
         "parcelas": 12,
         "parcela": 833
     },
     "zerado_antigo": {
-        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐳𝐞𝐫𝐚𝐝𝐨 (fora de linha)",
-        "total": 10000,
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 zerado (fora de linha)",
         "parcelas": 12,
         "parcela": 1000
     },
     "zerado_atual": {
-        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 𝐳𝐞𝐫𝐚𝐝𝐨 (atual)",
-        "total": 100000,
+        "nome": "𝐀𝐮𝐭𝐨𝐦𝐨́𝐯𝐞𝐥 zerado (atual)",
         "parcelas": 12,
         "parcela": 8333
     }
@@ -69,20 +55,10 @@ CONCESSIONARIA = {
 
 # ===== IMOBILIÁRIA =====
 IMOBILIARIA = {
-    "simples": {
-        "nome": "𝐂𝐚𝐬𝐚/AP sem reformas",
-        "aluguel": 450
-    },
-    "medio": {
-        "nome": "𝐂𝐚𝐬𝐚/AP pequeno estruturado",
-        "aluguel": 750
-    },
-    "luxo": {
-        "nome": "𝐂𝐚𝐬𝐚/AP caro",
-        "aluguel": 2340
-    }
+    "simples": {"nome": "𝐂𝐚𝐬𝐚/AP simples", "aluguel": 450},
+    "medio": {"nome": "𝐂𝐚𝐬𝐚/AP médio", "aluguel": 750},
+    "luxo": {"nome": "𝐂𝐚𝐬𝐚/AP luxo", "aluguel": 2340}
 }
-
 
 # ===== PERSISTÊNCIA =====
 def carregar_pontos():
@@ -92,29 +68,51 @@ def carregar_pontos():
     except FileNotFoundError:
         return {}
 
-def salvar_pontos(pontos):
+def salvar_pontos():
     with open(ARQUIVO_PONTOS, "w", encoding="utf-8") as f:
         json.dump(pontos, f, indent=4, ensure_ascii=False)
 
-# ===== DADOS =====
 pontos = carregar_pontos()
 
 def garantir_usuario(user_id):
-    if user_id not in pontos or not isinstance(pontos[user_id], dict):
+    if user_id not in pontos:
         pontos[user_id] = {
             "w": 0,
-            "vida": 100,
-            "energia": 400,
-            "bens": {
-                "veiculos": [],
-                "imoveis": []
-            },
+            "vida": VIDA_MAX,
+            "energia": ENERGIA_MAX,
             "parcelas": [],
             "aluguel": []
         }
 
-# ===== COMANDOS =====
-async def alugar_ap(update, context):
+# ===== START =====
+async def start(update, context):
+    await update.message.reply_text(
+        "🎓 *Sistema Yonsei*\n\n"
+        "/imobiliaria\n"
+        "/concessionaria\n"
+        "/mensalidade\n"
+        "/pontos",
+        parse_mode="Markdown"
+    )
+
+# ===== IMOBILIÁRIA =====
+async def imobiliaria(update, context):
+    keyboard = [
+        [InlineKeyboardButton(
+            f"{v['nome']} — ₩{v['aluguel']}/mês",
+            callback_data=f"alugar|{k}"
+        )]
+        for k, v in IMOBILIARIA.items()
+    ]
+
+    await update.message.reply_photo(
+        photo=FOTO_IMOBILIARIA,
+        caption="🏠 *𝐈𝐦𝐨𝐛𝐢𝐥𝐢𝐚́𝐫𝐢𝐚*\nEscolha um imóvel:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def alugar_callback(update, context):
     query = update.callback_query
     await query.answer()
 
@@ -124,21 +122,36 @@ async def alugar_ap(update, context):
     ap_id = query.data.split("|")[1]
     ap = IMOBILIARIA[ap_id]
 
-    pontos[user_id]["aluguel"] = {
+    pontos[user_id]["aluguel"].append({
         "nome": ap["nome"],
         "valor": ap["aluguel"]
-    }
+    })
 
-    salvar_pontos(pontos)
+    salvar_pontos()
 
     await query.edit_message_text(
-        f"🏠 *Imóvel alugado*\n\n"
-        f"{ap['nome']}\n"
-        f"₩{ap['aluguel']} por mês",
+        f"🏠 *Imóvel alugado*\n\n{ap['nome']}\n₩{ap['aluguel']}/mês",
         parse_mode="Markdown"
     )
 
-async def comprar_carro(update, context):
+# ===== CONCESSIONÁRIA =====
+async def concessionaria(update, context):
+    keyboard = [
+        [InlineKeyboardButton(
+            f"{v['nome']} — ₩{v['parcela']} x{v['parcelas']}",
+            callback_data=f"carro|{k}"
+        )]
+        for k, v in CONCESSIONARIA.items()
+    ]
+
+    await update.message.reply_photo(
+        photo=FOTO_CONCESSIONARIA,
+        caption="🚗 *𝐂𝐨𝐧𝐜𝐞𝐬𝐬𝐢𝐨𝐧𝐚́𝐫𝐢𝐚*\nEscolha um veículo:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def comprar_carro_callback(update, context):
     query = update.callback_query
     await query.answer()
 
@@ -148,280 +161,70 @@ async def comprar_carro(update, context):
     carro_id = query.data.split("|")[1]
     carro = CONCESSIONARIA[carro_id]
 
-    pontos[user_id].setdefault("parcelas", [])
     pontos[user_id]["parcelas"].append({
         "nome": carro["nome"],
         "valor": carro["parcela"],
         "restantes": carro["parcelas"]
     })
 
-    salvar_pontos(pontos)
+    salvar_pontos()
 
     await query.edit_message_text(
-        f"✅ *Compra realizada*\n\n"
-        f"{carro['nome']}\n"
-        f"₩{carro['parcela']} por {carro['parcelas']} meses",
+        f"🚗 *Compra realizada*\n\n{carro['nome']}\n"
+        f"{carro['parcelas']}x de ₩{carro['parcela']}",
         parse_mode="Markdown"
     )
 
-async def imobiliaria(update, context):
-    keyboard = [
-        [InlineKeyboardButton(
-            f"{d['nome']} — ₩{d['aluguel']}/mês",
-            callback_data=f"alugar_ap|{k}"
-        )]
-        for k, d in IMOBILIARIA.items()
-    ]
-
-    await update.message.reply_photo(
-        photo=FOTO_IMOBILIARIA,
-        caption="🏠 *𝐈𝐦𝐨𝐛𝐢𝐥𝐢𝐚́𝐫𝐢𝐚*\n\nEscolha um imóvel:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
-
-async def concessionaria(update, context):
-    keyboard = [
-        [InlineKeyboardButton(
-            f"{d['nome']} — ₩{d['parcela']} x{d['parcelas']}",
-            callback_data=f"comprar_carro|{k}"
-        )]
-        for k, d in CONCESSIONARIA.items()
-    ]
-
-    await update.message.reply_photo(
-        photo=FOTO_CONCESSIONARIA,
-        caption="🚗 *𝐂𝐨𝐧𝐜𝐞𝐬𝐬𝐢𝐨𝐧𝐚́𝐫𝐢𝐚*\n\nEscolha um veículo:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
-
+# ===== COBRANÇA MENSAL =====
 async def cobrar_mes(update, context):
-    for user_id, dados in pontos.items():
+    for dados in pontos.values():
 
-        # Parcelas
-        novas_parcelas = []
+        # parcelas
+        novas = []
         for p in dados["parcelas"]:
             if dados["w"] >= p["valor"]:
                 dados["w"] -= p["valor"]
                 p["restantes"] -= 1
                 if p["restantes"] > 0:
-                    novas_parcelas.append(p)
+                    novas.append(p)
             else:
-                novas_parcelas.append(p)
+                novas.append(p)
+        dados["parcelas"] = novas
 
-        dados["parcelas"] = novas_parcelas
+        # aluguel
+        for a in dados["aluguel"]:
+            if dados["w"] >= a["valor"]:
+                dados["w"] -= a["valor"]
 
-        # Aluguel
-        for aluguel in dados["aluguel"]:
-            if dados["w"] >= aluguel["valor"]:
-                dados["w"] -= aluguel["valor"]
-
-    salvar_pontos(pontos)
-
+    salvar_pontos()
     await update.message.reply_text("📆 Mês encerrado. Cobranças aplicadas.")
-
-async def alugar_ap(update, context):
-    user = update.effective_user
-    user_id = str(user.id)
-    garantir_usuario(user_id)
-
-    if not context.args:
-        await update.message.reply_text("❌ Use: /alugar_ap simples|medio|luxo")
-        return
-
-    tipo = context.args[0]
-
-    if tipo not in IMOBILIARIA:
-        await update.message.reply_text("❌ Tipo inválido.")
-        return
-
-    pontos[user_id]["aluguel"].append({
-        "tipo": tipo,
-        "valor": IMOBILIARIA[tipo]
-    })
-
-    salvar_pontos(pontos)
-
-    await update.message.reply_text(
-        f"🏠 AP alugado!\nMensalidade: {IMOBILIARIA[tipo]}₩˚₊‧"
-    )
-
-async def comprar_carro(update, context):
-    user = update.effective_user
-    user_id = str(user.id)
-    garantir_usuario(user_id)
-
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "❌ Use:\n/comprar_carro usado|fora_linha|atual vista|parcelado"
-        )
-        return
-
-    tipo = context.args[0]
-    forma = context.args[1]
-
-    if tipo not in CONCESSIONARIA:
-        await update.message.reply_text("❌ Tipo inválido.")
-        return
-
-    carro = CONCESSIONARIA[tipo]
-
-    if forma == "vista":
-        if pontos[user_id]["w"] < carro["preco"]:
-            await update.message.reply_text("❌ ₩˚₊‧ insuficiente.")
-            return
-
-        pontos[user_id]["w"] -= carro["preco"]
-        pontos[user_id]["bens"]["veiculos"].append(tipo)
-
-        msg = f"🚗 Veículo comprado à vista por {carro['preco']}₩˚₊‧"
-
-    elif forma == "parcelado":
-        pontos[user_id]["parcelas"].append({
-            "item": f"Carro {tipo}",
-            "valor": carro["parcela"],
-            "restantes": 12
-        })
-
-        pontos[user_id]["bens"]["veiculos"].append(tipo)
-
-        msg = (
-            "🚗 Veículo adquirido!\n"
-            f"12x de {carro['parcela']}₩˚₊‧"
-        )
-    else:
-        await update.message.reply_text("❌ Forma inválida.")
-        return
-
-    salvar_pontos(pontos)
-    await update.message.reply_text(msg)
-
-async def start(update, context):
-    await update.message.reply_text(
-        "🎓 *Sistema Yonsei*\n\n"
-        "/sorteio – carta aleatória\n"
-        "/pontuar +10 – alterar ₩˚₊‧\n"
-        "/energia +10 – alterar ✶˚₊‧\n"
-        "/vida +10 – alterar ♡˚₊‧\n"
-        "/mensalidade – pagar faculdade\n"
-        "/pontos – ver status\n"
-        "/reset – resetar tudo",
-        parse_mode="Markdown"
-    )
-
-async def sorteio(update, context):
-    sticker_set = await context.bot.get_sticker_set(STICKER_SET)
-    sticker = random.choice(sticker_set.stickers)
-    await update.message.reply_sticker(sticker.file_id)
-
-# ===== ₩˚₊‧ =====
-async def pontuar(update, context):
-    user = update.effective_user
-    user_id = str(user.id)
-
-    match = re.search(r'([+-]\d+)', " ".join(context.args))
-    if not match:
-        await update.message.reply_text("❌ Use /pontuar +10 ou -5")
-        return
-
-    valor = int(match.group(1))
-    garantir_usuario(user_id)
-
-    pontos[user_id]["w"] += valor
-    salvar_pontos(pontos)
-
-    await update.message.reply_text(
-        f"₩˚₊‧ {user.first_name}\n"
-        f"Alteração: {valor:+}₩˚₊‧\n"
-        f"Total: {pontos[user_id]['w']}₩˚₊‧"
-    )
-
-# ===== ✶˚₊‧ ENERGIA =====
-async def alterar_energia(update, context):
-    user_id = str(update.effective_user.id)
-    match = re.search(r'([+-]\d+)', " ".join(context.args))
-
-    if not match:
-        await update.message.reply_text("❌ Use /energia +10 ou -5")
-        return
-
-    valor = int(match.group(1))
-    garantir_usuario(user_id)
-
-    pontos[user_id]["energia"] = max(
-        0,
-        min(ENERGIA_MAX, pontos[user_id]["energia"] + valor)
-    )
-
-    salvar_pontos(pontos)
-
-    await update.message.reply_text(
-        f"✶˚₊‧ Energia: {pontos[user_id]['energia']}/{ENERGIA_MAX}"
-    )
-
-# ===== ♡˚₊‧ VIDA =====
-async def alterar_vida(update, context):
-    user_id = str(update.effective_user.id)
-    match = re.search(r'([+-]\d+)', " ".join(context.args))
-
-    if not match:
-        await update.message.reply_text("❌ Use /vida +10 ou -5")
-        return
-
-    valor = int(match.group(1))
-    garantir_usuario(user_id)
-
-    pontos[user_id]["vida"] = max(
-        0,
-        min(VIDA_MAX, pontos[user_id]["vida"] + valor)
-    )
-
-    salvar_pontos(pontos)
-
-    await update.message.reply_text(
-        f"♡˚₊‧ Vida: {pontos[user_id]['vida']}/{VIDA_MAX}"
-    )
 
 # ===== STATUS =====
 async def ver_pontos(update, context):
-    user = update.effective_user
-    user_id = str(user.id)
+    user_id = str(update.effective_user.id)
     garantir_usuario(user_id)
 
+    d = pontos[user_id]
     await update.message.reply_text(
-        f"📊 *Status de {user.first_name}*\n\n"
-        f"₩˚₊‧ {pontos[user_id]['w']}\n"
-        f"✶˚₊‧ {pontos[user_id]['energia']}/{ENERGIA_MAX}\n"
-        f"♡˚₊‧ {pontos[user_id]['vida']}/{VIDA_MAX}",
+        f"📊 *Status*\n\n"
+        f"₩˚₊‧ {d['w']}\n"
+        f"✶˚₊‧ {d['energia']}/{ENERGIA_MAX}\n"
+        f"♡˚₊‧ {d['vida']}/{VIDA_MAX}",
         parse_mode="Markdown"
     )
-
-# ===== RESET =====
-async def reset_pontos(update, context):
-    user_id = str(update.effective_user.id)
-
-    pontos[user_id] = {
-        "w": 0,
-        "energia": ENERGIA_MAX,
-        "vida": VIDA_MAX
-    }
-    salvar_pontos(pontos)
-
-    await update.message.reply_text("🔄 Status resetado.")
 
 # ===== MENSALIDADE =====
 async def mensalidade(update, context):
     keyboard = [
         [InlineKeyboardButton(
-            f"{dados['nome']}: {dados['valor']}₩˚₊‧",
-            callback_data=f"pagar|{curso}"
+            f"{v['nome']} — ₩{v['valor']}",
+            callback_data=f"mensal|{k}"
         )]
-        for curso, dados in MENSALIDADES.items()
+        for k, v in MENSALIDADES.items()
     ]
 
     await update.message.reply_text(
-        "📚 *𝐌𝐞𝐧𝐬𝐚𝐥𝐢𝐝𝐚𝐝𝐞𝐬*",
+        "📚 *Mensalidades*",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -433,52 +236,39 @@ async def pagar_mensalidade(update, context):
     user_id = str(query.from_user.id)
     garantir_usuario(user_id)
 
-    curso_id = query.data.split("|")[1]
-    curso = MENSALIDADES[curso_id]
+    curso = MENSALIDADES[query.data.split("|")[1]]
     valor = curso["valor"]
 
     if pontos[user_id]["w"] < valor:
-        await query.edit_message_text(
-            f"❌ Saldo insuficiente\n"
-            f"Você tem {pontos[user_id]['w']}₩˚₊‧"
-        )
+        await query.edit_message_text("❌ Saldo insuficiente.")
         return
 
     pontos[user_id]["w"] -= valor
-    salvar_pontos(pontos)
+    salvar_pontos()
 
     await query.edit_message_text(
-        f"✅ *Mensalidade paga*\n\n"
-        f"{curso['nome']}\n"
-        f"-{valor}₩˚₊‧\n"
-        f"Saldo: {pontos[user_id]['w']}₩˚₊‧",
+        f"✅ {curso['nome']} paga\nSaldo: ₩{pontos[user_id]['w']}",
         parse_mode="Markdown"
     )
 
-# ===== WEBHOOK =====
+# ===== APP =====
 PORT = int(os.environ.get("PORT", 10000))
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("sorteio", sorteio))
-app.add_handler(CommandHandler("pontuar", pontuar))
-app.add_handler(CommandHandler("energia", alterar_energia))
-app.add_handler(CommandHandler("vida", alterar_vida))
-app.add_handler(CommandHandler("pontos", ver_pontos))
-app.add_handler(CommandHandler("reset", reset_pontos))
-app.add_handler(CommandHandler("mensalidade", mensalidade))
-app.add_handler(CallbackQueryHandler(pagar_mensalidade, pattern="^pagar\\|"))
-app.add_handler(CommandHandler("comprar_carro", comprar_carro))
-app.add_handler(CommandHandler("alugar_ap", alugar_ap))
-app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
-app.add_handler(CommandHandler("concessionaria", concessionaria))
 app.add_handler(CommandHandler("imobiliaria", imobiliaria))
-app.add_handler(CallbackQueryHandler(comprar_carro, pattern="^comprar_carro\\|"))
-app.add_handler(CallbackQueryHandler(alugar_ap, pattern="^alugar_ap\\|"))
+app.add_handler(CommandHandler("concessionaria", concessionaria))
+app.add_handler(CommandHandler("mensalidade", mensalidade))
+app.add_handler(CommandHandler("pontos", ver_pontos))
+app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
 
-print("🤖 Bot rodando via webhook...")
+app.add_handler(CallbackQueryHandler(alugar_callback, pattern="^alugar\\|"))
+app.add_handler(CallbackQueryHandler(comprar_carro_callback, pattern="^carro\\|"))
+app.add_handler(CallbackQueryHandler(pagar_mensalidade, pattern="^mensal\\|"))
+
+print("🤖 Bot rodando...")
 
 app.run_webhook(
     listen="0.0.0.0",
