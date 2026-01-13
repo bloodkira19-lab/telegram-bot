@@ -327,14 +327,13 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("imobiliaria", imobiliaria))
-app.add_handler(CommandHandler("concessionaria", concessionaria))
 app.add_handler(CommandHandler("mensalidade", mensalidade))
 app.add_handler(CommandHandler("pontos", ver_pontos))
 app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
-
 app.add_handler(CallbackQueryHandler(alugar_callback, pattern="^alugar\\|"))
 app.add_handler(CallbackQueryHandler(comprar_carro_callback, pattern="^carro\\|"))
+app.add_handler(CommandHandler("imobiliaria", imobiliaria))
+app.add_handler(CommandHandler("concessionaria", concessionaria))
 app.add_handler(CallbackQueryHandler(pagar_mensalidade, pattern="^mensal\\|"))
 app.add_handler(CommandHandler("vida", alterar_vida))
 app.add_handler(CommandHandler("energia", alterar_energia))
@@ -348,6 +347,7 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
+
 
 
 
