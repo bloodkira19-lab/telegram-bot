@@ -1,5 +1,3 @@
-# ===== IMPORTS =====
-import random
 import re
 import json
 import os
@@ -83,6 +81,77 @@ def garantir_usuario(user_id):
             "parcelas": [],
             "aluguel": []
         }
+# ===== ♡˚₊‧ VIDA =====
+async def alterar_vida(update, context):
+    user = update.effective_user
+    user_id = str(user.id)
+    garantir_usuario(user_id)
+
+    match = re.search(r'([+-]\d+)', " ".join(context.args))
+    if not match:
+        await update.message.reply_text("❌ Use /vida +10 ou -5")
+        return
+
+    valor = int(match.group(1))
+
+    pontos[user_id]["vida"] = max(
+        0,
+        min(VIDA_MAX, pontos[user_id]["vida"] + valor)
+    )
+
+    salvar_pontos()
+
+    await update.message.reply_text(
+        f"♡˚₊‧ {user.first_name}\n"
+        f"Alteração: {valor:+}♡˚₊‧\n"
+        f"Total: {pontos[user_id]['vida']}/{VIDA_MAX}♡˚₊‧"
+    )
+# ===== ✶˚₊‧ ENERGIA =====
+async def alterar_energia(update, context):
+    user = update.effective_user
+    user_id = str(user.id)
+    garantir_usuario(user_id)
+
+    match = re.search(r'([+-]\d+)', " ".join(context.args))
+    if not match:
+        await update.message.reply_text("❌ Use /energia +10 ou -5")
+        return
+
+    valor = int(match.group(1))
+
+    pontos[user_id]["energia"] = max(
+        0,
+        min(ENERGIA_MAX, pontos[user_id]["energia"] + valor)
+    )
+
+    salvar_pontos()
+
+    await update.message.reply_text(
+        f"✶˚₊‧ {user.first_name}\n"
+        f"Alteração: {valor:+}✶˚₊‧\n"
+        f"Total: {pontos[user_id]['energia']}/{ENERGIA_MAX}✶˚₊‧"
+    )
+# ===== ₩˚₊‧ WON =====
+async def pontuar(update, context):
+    user = update.effective_user
+    user_id = str(user.id)
+    garantir_usuario(user_id)
+
+    match = re.search(r'([+-]\d+)', " ".join(context.args))
+    if not match:
+        await update.message.reply_text("❌ Use /pontuar +10 ou -5")
+        return
+
+    valor = int(match.group(1))
+    pontos[user_id]["w"] += valor
+
+    salvar_pontos()
+
+    await update.message.reply_text(
+        f"₩˚₊‧ {user.first_name}\n"
+        f"Alteração: {valor:+}₩˚₊‧\n"
+        f"Total: {pontos[user_id]['w']}₩˚₊‧"
+    )
 
 # ===== START =====
 async def start(update, context):
@@ -267,6 +336,9 @@ app.add_handler(CommandHandler("cobrar_mes", cobrar_mes))
 app.add_handler(CallbackQueryHandler(alugar_callback, pattern="^alugar\\|"))
 app.add_handler(CallbackQueryHandler(comprar_carro_callback, pattern="^carro\\|"))
 app.add_handler(CallbackQueryHandler(pagar_mensalidade, pattern="^mensal\\|"))
+app.add_handler(CommandHandler("vida", alterar_vida))
+app.add_handler(CommandHandler("energia", alterar_energia))
+app.add_handler(CommandHandler("pontuar", pontuar))
 
 print("🤖 Bot rodando...")
 
@@ -276,5 +348,6 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
 )
+
 
 
